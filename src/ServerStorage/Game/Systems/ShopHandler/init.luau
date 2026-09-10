@@ -1,0 +1,3 @@
+local ShopHandler = {}
+
+return ShopHandler
