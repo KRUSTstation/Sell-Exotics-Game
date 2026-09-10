@@ -96,7 +96,7 @@ function SellingHelper.GetTotalPrice(player: Player)
 		end
 	end
 	
-	if math.abs(totalCost) < 1e-6 then -- floating point error lol
+	if #animalsToSell <= 0 then
 		return nil
 	end
 

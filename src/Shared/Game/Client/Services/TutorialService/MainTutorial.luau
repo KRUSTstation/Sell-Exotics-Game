@@ -10,6 +10,8 @@ local tutorialUI = playerGui.GameUI:WaitForChild("Tutorials")
 local MainTutUI = ReplicatedStorage.Assets.UI.Tutorial.MainTutorial
 local sellingPrompt = workspace.SpawnArea.Ship:WaitForChild("Sell"):WaitForChild("ProximityPrompt")
 
+local NotifController = require(ReplicatedStorage.Game.Client.Controllers.UIController:WaitForChild("NotifController"))
+
 local ship = workspace:WaitForChild("SpawnArea"):WaitForChild("Ship")
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
@@ -126,52 +128,20 @@ end
 
 function MainTutorial.StartTutorial()
 	local char = player.Character or player.CharacterAdded:Wait()
-	
+
 	local mainTutorialUI = MainTutUI:WaitForChild("MainTutorialFrame"):Clone()
 	local collectAnimalUI = MainTutUI:WaitForChild("CollectAnimalFrame"):Clone()
 	local sellItemUI = MainTutUI:WaitForChild("SellItemFrame"):Clone()
 	local openTutorialUI = MainTutUI:WaitForChild("OpenTutorialFrame"):Clone()
-	
-	player.CharacterAdded:Connect(function(newChar)
-		camera.CameraType = Enum.CameraType.Custom
-		tutorialUI = playerGui.GameUI:WaitForChild("Tutorials")
-		openTutorialUI = MainTutUI:WaitForChild("OpenTutorialFrame"):Clone()
 
-		openTutorialUI.Parent = tutorialUI
-		openTutorialUI.Visible = not MainTutorial.Open
-		openTutorialUI.Button.MouseButton1Click:Connect(MainTutorial.OpenFrame)
-		
-		char = newChar
-	end)
-	
-	mainTutorialUI.Parent = tutorialUI
-	
-	openTutorialUI.Parent = tutorialUI
-	openTutorialUI.Visible = not MainTutorial.Open
-	openTutorialUI.Button.MouseButton1Click:Connect(MainTutorial.OpenFrame)
-	
-	MainTutorial.OpenFrame()
-	local closeConn = mainTutorialUI:WaitForChild("Close").MouseButton1Click:Connect(MainTutorial.CloseFrame)
-	
-	collectAnimalUI.Parent = mainTutorialUI
-	collectAnimalUI.Visible = true
-	
-	SpawnDummyEvent:FireServer()
-	task.wait(0.5)
-	
+	local closeConn
+	local showMeWhereConn
+	local getNewConn
+	local currentStage = "collect" -- "collect" | "sell"
 	local model
-	while not model do
-		for _, i in pairs(workspace.Spawns:GetDescendants()) do
-			local att = i:GetAttribute("ExclusiveToPlayer")
-			
-			if att and att == Players.LocalPlayer.UserId then
-				model = i
-				break
-			end
-			task.wait()
-		end
-	end
+	local highlight
 	
+	--//Function Declarations
 	local showMeWherecd = false
 	local function showMeWhere(model, dist)
 		if showMeWherecd then return end
@@ -202,52 +172,176 @@ function MainTutorial.StartTutorial()
 		showMeWherecd = false
 	end
 	
-	local showMeWhereConn = collectAnimalUI:WaitForChild("ShowMeWhere").MouseButton1Click:Connect(function()
-		showMeWhere(model, 20)
-	end)
-	
-	local highlight = Instance.new("Highlight")
-	highlight.Parent = workspace
-	highlight.Adornee = model
-	
-	local modelPrompt = model.PrimaryPart:WaitForChild("ProximityPrompt")
-	waitForPrompt(modelPrompt)
-	
-	showMeWhereConn:Disconnect()
-	
-	if not mainTutorialUI or not mainTutorialUI.Parent then	
-		closeConn:Disconnect()
+	local getNewcd = false
+	local function getNewAnimal()
+		if getNewcd or showMeWherecd then return end
+		getNewcd = true
 		
-		mainTutorialUI = MainTutUI:WaitForChild("MainTutorialFrame"):Clone()
-		sellItemUI = MainTutUI:WaitForChild("SellItemFrame"):Clone()
-		openTutorialUI = MainTutUI:WaitForChild("OpenTutorialFrame"):Clone()
-		
-		mainTutorialUI.Parent = tutorialUI
+		local notifConn = collectAnimalUI:WaitForChild("GetNew").MouseButton1Click:Connect(function()
+			NotifController.AddNotification("Please wait for 5 seconds", Color3.new(1, 0.25098, 0), 2)
+			NotifController.ErrorSound()
+		end)
 
-		closeConn = mainTutorialUI:WaitForChild("Close").MouseButton1Click:Connect(MainTutorial.CloseFrame)
+		SpawnDummyEvent:FireServer()
+		showMeWherecd = true
+		task.wait(0.5)
+		
+		model = nil
+		while not model do
+			for _, i in pairs(workspace.Spawns:GetDescendants()) do
+				local att = i:GetAttribute("ExclusiveToPlayer")
+
+				if att and att == Players.LocalPlayer.UserId then
+					model = i
+					break
+				end
+				task.wait()
+			end
+		end
+		
+		highlight.Adornee = currentStage == "collect" and model or sellingPrompt.Parent.Parent
+		showMeWherecd = false
+		
+		task.delay(5, function()
+			notifConn:Disconnect()
+			getNewcd = false
+		end)
+	end
+
+	local function reconnectCollectStage()
+		if collectAnimalUI then collectAnimalUI:Destroy() end
+		collectAnimalUI = MainTutUI:WaitForChild("CollectAnimalFrame"):Clone()
+		collectAnimalUI.Parent = mainTutorialUI
+		collectAnimalUI.Visible = true
+
+		if showMeWhereConn then showMeWhereConn:Disconnect() end
+		showMeWhereConn = collectAnimalUI:WaitForChild("ShowMeWhere").MouseButton1Click:Connect(function()
+			showMeWhere(model, 20)
+		end)
+		
+		if getNewConn then getNewConn:Disconnect() end
+		getNewConn = collectAnimalUI:WaitForChild("GetNew").MouseButton1Click:Connect(function()
+			getNewAnimal()
+		end)
+	end
+
+	local function reconnectSellStage()
+		if sellItemUI then sellItemUI:Destroy() end
+		sellItemUI = MainTutUI:WaitForChild("SellItemFrame"):Clone()
+		sellItemUI.Parent = mainTutorialUI
+		sellItemUI.Visible = true
+
+		if showMeWhereConn then showMeWhereConn:Disconnect() end
+		showMeWhereConn = sellItemUI:WaitForChild("ShowMeWhere").MouseButton1Click:Connect(function()
+			showMeWhere(ship, 1)
+		end)
 	end
 	
+	--//If player dies//
+	local charAddedConn
+	charAddedConn = player.CharacterAdded:Connect(function(newChar)
+		camera.CameraType = Enum.CameraType.Custom
+		tutorialUI = playerGui:WaitForChild("GameUI"):WaitForChild("Tutorials")
+
+		openTutorialUI = MainTutUI:WaitForChild("OpenTutorialFrame"):Clone()
+		openTutorialUI.Parent = tutorialUI
+		openTutorialUI.Visible = not MainTutorial.Open
+		openTutorialUI.Button.MouseButton1Click:Connect(MainTutorial.OpenFrame)
+
+		-- reclone mainTutorialUI fresh instead of just repositioning the old instance
+		if mainTutorialUI then mainTutorialUI:Destroy() end
+		mainTutorialUI = MainTutUI:WaitForChild("MainTutorialFrame"):Clone()
+		mainTutorialUI.Parent = tutorialUI
+		mainTutorialUI.Visible = MainTutorial.Open
+		mainTutorialUI.Position = MainTutorial.Open
+			and UIStates[mainTutorialUI.Name].Position
+			or UDim2.new(UIStates[mainTutorialUI.Name].Position.X.Scale, 0, 1, 0)
+
+		if closeConn then closeConn:Disconnect() end
+		closeConn = mainTutorialUI:WaitForChild("Close").MouseButton1Click:Connect(MainTutorial.CloseFrame)
+
+		if currentStage == "collect" then
+			reconnectCollectStage()
+		elseif currentStage == "sell" then
+			reconnectSellStage()
+		end
+
+		if highlight then
+			highlight.Adornee = currentStage == "collect" and model or sellingPrompt.Parent.Parent
+		end
+
+		char = newChar
+	end)
+	
+	--//Tutorial Start//
+	mainTutorialUI.Parent = tutorialUI
+
+	openTutorialUI.Parent = tutorialUI
+	openTutorialUI.Visible = not MainTutorial.Open
+	openTutorialUI.Button.MouseButton1Click:Connect(MainTutorial.OpenFrame)
+
+	MainTutorial.OpenFrame()
+	closeConn = mainTutorialUI:WaitForChild("Close").MouseButton1Click:Connect(MainTutorial.CloseFrame)
+
+	collectAnimalUI.Parent = mainTutorialUI
+	collectAnimalUI.Visible = true
+
+	SpawnDummyEvent:FireServer()
+	task.wait(0.5)
+
+	while not model do
+		for _, i in pairs(workspace.Spawns:GetDescendants()) do
+			local att = i:GetAttribute("ExclusiveToPlayer")
+
+			if att and att == Players.LocalPlayer.UserId then
+				model = i
+				break
+			end
+			task.wait()
+		end
+	end
+	
+	getNewConn = collectAnimalUI:WaitForChild("GetNew").MouseButton1Click:Connect(function()
+		getNewAnimal()
+	end)
+
+	showMeWhereConn = collectAnimalUI:WaitForChild("ShowMeWhere").MouseButton1Click:Connect(function()
+		showMeWhere(model, 20)
+	end)
+
+	highlight = Instance.new("Highlight")
+	highlight.Parent = workspace
+	highlight.Adornee = model
+
+	local modelPrompt = model.PrimaryPart:WaitForChild("ProximityPrompt")
+	waitForPrompt(modelPrompt)
+
+	showMeWhereConn:Disconnect()
+	getNewConn:Disconnect()
+
+	currentStage = "sell"
 	collectAnimalUI:Destroy()
 	sellItemUI.Parent = mainTutorialUI
 	sellItemUI.Visible = true
 	MainTutorial.OpenFrame()
-	
-	local showMeWhereConn = sellItemUI:WaitForChild("ShowMeWhere").MouseButton1Click:Connect(function()
+
+	showMeWhereConn = sellItemUI:WaitForChild("ShowMeWhere").MouseButton1Click:Connect(function()
 		showMeWhere(ship, 1)
 	end)
-	
+
 	highlight.Adornee = sellingPrompt.Parent.Parent
-	
+
 	waitForPrompt(sellingPrompt)
-	
+
 	highlight:Destroy()
-	
+
 	closeConn:Disconnect()
 	MainTutorial.CloseFrame()
 	showMeWhereConn:Disconnect()
 	mainTutorialUI:Destroy()
 	openTutorialUI:Destroy()
-	
+	charAddedConn:Disconnect()
+
 	return 'completed'
 end
 

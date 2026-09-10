@@ -37,7 +37,7 @@ end
 
 function NotifController.InsufficientStrengthNotif()
 	NotifController.AddNotification("Insufficient strength!", Color3.new(1, 0.25098, 0), 2)
-	SFX.Error:Play()
+	NotifController.ErrorSound()
 end
 
 function NotifController.CoinsChangedNotif(amt:number)
@@ -55,16 +55,20 @@ end
 
 function NotifController.MaxLevelNotif()
 	NotifController.AddNotification("Max Level!", Color3.new(0.796078, 0, 0), 2)
-	SFX.Error:Play()
+	NotifController.ErrorSound()
 end
 
 function NotifController.NoLevelNotif()
 	NotifController.AddNotification("Too low level!", Color3.new(0.796078, 0.568627, 0), 2)
-	SFX.Error:Play()
+	NotifController.ErrorSound()
 end
 
 function NotifController.NoMoneyNotif()
 	NotifController.AddNotification("Not enough money!", Color3.new(0.870588, 0, 0.0156863), 2)
+	NotifController.ErrorSound()
+end
+
+function NotifController.ErrorSound()
 	SFX.Error:Play()
 end
 

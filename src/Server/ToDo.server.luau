@@ -5,5 +5,4 @@ TODO:
 	- Make the ui tutorial abit better 
 	- Weapons
 	- Boss Fights
-
 ]]

@@ -88,7 +88,9 @@ local function AlignToGround(model)
 end
 
 function Spawning.SpawnInArea(spawnArea: BasePart, objectTemplate: Model, count: number, offsetAboveGround: number, exclusiveToPlayer: Player)
-	if exclusiveToPlayer and PlayerSpecificSpawns[exclusiveToPlayer] then return end
+	if exclusiveToPlayer and PlayerSpecificSpawns[exclusiveToPlayer] then
+		PlayerSpecificSpawns[exclusiveToPlayer]:Destroy()	
+	end
 	
 	local folder = workspace:WaitForChild("Spawns"):FindFirstChild(spawnArea.Name)
 	local trees = workspace:FindFirstChild("Trees"):FindFirstChild(spawnArea.Name)
