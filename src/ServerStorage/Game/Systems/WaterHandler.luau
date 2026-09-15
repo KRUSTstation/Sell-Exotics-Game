@@ -5,6 +5,11 @@ function WaterHandler.Init()
 	
 	for _, part in ipairs(waterModel:GetDescendants()) do
 		if part:IsA("BasePart") then
+			local modifier = Instance.new("PathfindingModifier")
+			modifier.Label = "Water"
+			modifier.PassThrough = false
+			modifier.Parent = part
+			
 			part.Touched:Connect(function(part)
 				local char = part.Parent
 				if char:FindFirstChild("Humanoid") then

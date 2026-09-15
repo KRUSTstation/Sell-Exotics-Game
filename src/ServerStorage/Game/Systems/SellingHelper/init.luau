@@ -77,12 +77,14 @@ function SellingHelper.GetTotalPrice(player: Player)
 		return
 	end
 	
+	local animalCount = 0
 	local animalsToSell = {}
 	for animal, infos in pairs(data.Backpack) do
 		animalsToSell[animal] = {}
 		for i, animal_data in ipairs(infos) do
 			if animal_data.Favourite then continue end
 			table.insert(animalsToSell[animal], {index = i, data = animal_data})
+			animalCount += 1
 		end
 	end
 	
@@ -96,7 +98,7 @@ function SellingHelper.GetTotalPrice(player: Player)
 		end
 	end
 	
-	if #animalsToSell <= 0 then
+	if animalCount <= 0 then
 		return nil
 	end
 
