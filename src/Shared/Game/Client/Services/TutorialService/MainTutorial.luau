@@ -103,9 +103,11 @@ local function getCameraCFrame(target, dist, fov)
 	return CFrame.new(cameraPosition, center)
 end
 
-local function waitForPrompt(prompt)
+local function waitForPrompt(getPrompt)
 	while true do
+		local prompt = getPrompt()
 		local triggered = false
+		local changed = false
 
 		local conn
 		conn = prompt.Triggered:Connect(function(plr)
@@ -114,15 +116,19 @@ local function waitForPrompt(prompt)
 			end
 		end)
 
-		repeat task.wait() until triggered or not player.Character
+		while not triggered do
+			task.wait()
+			if getPrompt() ~= prompt then
+				changed = true
+				break
+			end
+		end
 
 		conn:Disconnect()
 
 		if triggered then
 			return
 		end
-
-		player.CharacterAdded:Wait()
 	end
 end
 
@@ -174,7 +180,7 @@ function MainTutorial.StartTutorial()
 	
 	local getNewcd = false
 	local function getNewAnimal()
-		if getNewcd or showMeWherecd then return end
+		if getNewcd or showMeWherecd or not model then return end
 		getNewcd = true
 		
 		local notifConn = collectAnimalUI:WaitForChild("GetNew").MouseButton1Click:Connect(function()
@@ -195,7 +201,7 @@ function MainTutorial.StartTutorial()
 					model = i
 					break
 				end
-				task.wait()
+				--task.wait()
 			end
 		end
 		
@@ -301,8 +307,12 @@ function MainTutorial.StartTutorial()
 		end
 	end
 	
+	local modelPrompt = model.PrimaryPart:WaitForChild("ProximityPrompt")
 	getNewConn = collectAnimalUI:WaitForChild("GetNew").MouseButton1Click:Connect(function()
 		getNewAnimal()
+		if model then
+			modelPrompt = model.PrimaryPart:WaitForChild("ProximityPrompt")
+		end
 	end)
 
 	showMeWhereConn = collectAnimalUI:WaitForChild("ShowMeWhere").MouseButton1Click:Connect(function()
@@ -313,8 +323,9 @@ function MainTutorial.StartTutorial()
 	highlight.Parent = workspace
 	highlight.Adornee = model
 
-	local modelPrompt = model.PrimaryPart:WaitForChild("ProximityPrompt")
-	waitForPrompt(modelPrompt)
+	waitForPrompt(function()
+		return modelPrompt
+	end)
 
 	showMeWhereConn:Disconnect()
 	getNewConn:Disconnect()
@@ -331,7 +342,9 @@ function MainTutorial.StartTutorial()
 
 	highlight.Adornee = sellingPrompt.Parent.Parent
 
-	waitForPrompt(sellingPrompt)
+	waitForPrompt(function()
+		return sellingPrompt
+	end)
 
 	highlight:Destroy()
 

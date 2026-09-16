@@ -23,7 +23,7 @@ Bandit.RoamCdMin = 5
 
 Bandit.SpawnAreas = {SpawnAreas.Jungle}
 Bandit.SpawnFrequency = 500 -- in s
-Bandit.SpawnAmount = 1
+Bandit.SpawnAmount = 10
 Bandit.DespawnTime = 100 -- in s
 
 Bandit.Model = ReplicatedStorage.Assets.Meshes.Enemies:WaitForChild("Bandit")

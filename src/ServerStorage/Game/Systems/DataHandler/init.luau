@@ -33,7 +33,7 @@ c: Minor Bug Fixes
 ]]
 
 local DataStore = DataStoreService:GetDataStore(
-	RunService:IsStudio() and "dataStudio6" or "AlphaGame1.0.2" 
+	RunService:IsStudio() and "dataStudio8" or "AlphaGame1.0.2" 
 )
 
 local DefaultData = {

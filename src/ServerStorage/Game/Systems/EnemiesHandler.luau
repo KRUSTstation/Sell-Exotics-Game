@@ -49,11 +49,9 @@ function EnemiesHandler.Start()
 			for _, spawnArea in pairs(info.SpawnAreas) do
 				task.spawn(function()
 					while true do
-						--task.wait(info.SpawnFrequency)
+						task.wait(info.SpawnFrequency)
 						
 						EnemiesHandler.SpawnInArea(spawnArea, info.Model, info.SpawnAmount)		
-						
-						task.wait(info.SpawnFrequency) -- delete this ltr
 					end
 				end)
 			end
